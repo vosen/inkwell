@@ -9,6 +9,7 @@ mod call_site_value;
 mod enums;
 mod float_value;
 mod fn_value;
+#[cfg(feature = "execution_engine")]
 mod generic_value;
 mod global_value;
 mod instruction_value;
@@ -43,6 +44,7 @@ pub use crate::values::call_site_value::CallSiteValue;
 pub use crate::values::enums::{AggregateValueEnum, AnyValueEnum, BasicMetadataValueEnum, BasicValueEnum};
 pub use crate::values::float_value::FloatValue;
 pub use crate::values::fn_value::FunctionValue;
+#[cfg(feature = "execution_engine")]
 pub use crate::values::generic_value::GenericValue;
 pub use crate::values::global_value::GlobalValue;
 #[llvm_versions(7..)]

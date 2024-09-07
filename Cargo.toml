@@ -133,6 +133,11 @@ target-all = [
 ]
 experimental = ["static-alloc"]
 nightly = ["inkwell_internals/nightly"]
+passes = []
+execution_engine = []
+targets = []
+linker = []
+object_file = []
 
 [dependencies]
 inkwell_internals = { path = "./internal_macros", version = "0.10.0" }

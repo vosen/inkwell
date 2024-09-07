@@ -7,7 +7,9 @@ use crate::support::LLVMString;
 use crate::types::enums::BasicMetadataTypeEnum;
 use crate::types::traits::AsTypeRef;
 use crate::types::{ArrayType, FunctionType, PointerType, Type, VectorType};
-use crate::values::{ArrayValue, FloatValue, GenericValue, IntValue};
+use crate::values::{ArrayValue, FloatValue, IntValue};
+#[cfg(feature = "execution_engine")]
+use crate::values::GenericValue;
 use crate::AddressSpace;
 
 use std::fmt::{self, Display};
@@ -285,6 +287,7 @@ impl<'ctx> FloatType<'ctx> {
     }
 
     /// Creates a `GenericValue` for use with `ExecutionEngine`s.
+    #[cfg(feature = "execution_engine")]
     pub fn create_generic_value(self, value: f64) -> GenericValue<'ctx> {
         unsafe { GenericValue::new(LLVMCreateGenericValueOfFloat(self.as_type_ref(), value)) }
     }

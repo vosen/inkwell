@@ -8,7 +8,9 @@ use crate::context::ContextRef;
 use crate::support::LLVMString;
 use crate::types::traits::AsTypeRef;
 use crate::types::{ArrayType, FunctionType, PointerType, Type, VectorType};
-use crate::values::{ArrayValue, GenericValue, IntValue};
+#[cfg(feature = "execution_engine")]
+use crate::values::GenericValue;
+use crate::values::{ArrayValue, IntValue};
 use crate::AddressSpace;
 
 use crate::types::enums::BasicMetadataTypeEnum;
@@ -389,6 +391,7 @@ impl<'ctx> IntType<'ctx> {
     }
 
     /// Creates a `GenericValue` for use with `ExecutionEngine`s.
+    #[cfg(feature = "execution_engine")]
     pub fn create_generic_value(self, value: u64, is_signed: bool) -> GenericValue<'ctx> {
         unsafe { GenericValue::new(LLVMCreateGenericValueOfInt(self.as_type_ref(), value, is_signed as i32)) }
     }

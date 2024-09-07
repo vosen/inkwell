@@ -30,13 +30,19 @@ pub mod context;
 pub mod data_layout;
 #[cfg(not(any(feature = "llvm4-0", feature = "llvm5-0", feature = "llvm6-0")))]
 pub mod debug_info;
+#[cfg(feature = "execution_engine")]
 pub mod execution_engine;
 pub mod intrinsics;
 pub mod memory_buffer;
 #[deny(missing_docs)]
 pub mod module;
+#[cfg(feature = "object_file")]
 pub mod object_file;
+#[cfg(feature = "passes")]
 pub mod passes;
+#[cfg(feature = "targets")]
+pub mod targets;
+#[cfg_attr(not(feature = "targets"), path = "targets_triple.rs")]
 pub mod targets;
 pub mod types;
 pub mod values;

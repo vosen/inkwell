@@ -7,7 +7,6 @@ use llvm_sys::core::{
 use llvm_sys::object::LLVMCreateObjectFile;
 use llvm_sys::prelude::LLVMMemoryBufferRef;
 
-use crate::object_file::ObjectFile;
 use crate::support::{to_c_str, LLVMString};
 
 use std::mem::{forget, MaybeUninit};
@@ -123,6 +122,7 @@ impl MemoryBuffer {
 
     /// Convert this `MemoryBuffer` into an `ObjectFile`. LLVM does not currently
     /// provide any way to determine the cause of error if conversion fails.
+    #[cfg(feature = "object_file")]
     pub fn create_object_file(self) -> Result<ObjectFile, ()> {
         #[allow(deprecated)]
         let object_file = unsafe { LLVMCreateObjectFile(self.memory_buffer) };

@@ -9,10 +9,10 @@ use llvm_sys::core::LLVMGetTypeByName;
 
 use llvm_sys::core::{
     LLVMAddFunction, LLVMAddGlobal, LLVMAddGlobalInAddressSpace, LLVMAddNamedMetadataOperand, LLVMCloneModule,
-    LLVMDisposeModule, LLVMDumpModule, LLVMGetFirstFunction, LLVMGetFirstGlobal, LLVMGetLastFunction,
-    LLVMGetLastGlobal, LLVMGetModuleContext, LLVMGetModuleIdentifier, LLVMGetNamedFunction, LLVMGetNamedGlobal,
-    LLVMGetNamedMetadataNumOperands, LLVMGetNamedMetadataOperands, LLVMGetTarget, LLVMPrintModuleToFile,
-    LLVMPrintModuleToString, LLVMSetDataLayout, LLVMSetModuleIdentifier, LLVMSetTarget, LLVMDisposeMessage
+    LLVMDisposeMessage, LLVMDisposeModule, LLVMDumpModule, LLVMGetFirstFunction, LLVMGetFirstGlobal,
+    LLVMGetLastFunction, LLVMGetLastGlobal, LLVMGetModuleContext, LLVMGetModuleIdentifier, LLVMGetNamedFunction,
+    LLVMGetNamedGlobal, LLVMGetNamedMetadataNumOperands, LLVMGetNamedMetadataOperands, LLVMGetTarget,
+    LLVMPrintModuleToFile, LLVMPrintModuleToString, LLVMSetDataLayout, LLVMSetModuleIdentifier, LLVMSetTarget,
 };
 #[llvm_versions(7..)]
 use llvm_sys::core::{LLVMAddModuleFlag, LLVMGetModuleFlag};
@@ -43,14 +43,17 @@ use crate::context::{AsContextRef, Context, ContextRef};
 use crate::data_layout::DataLayout;
 #[llvm_versions(7..)]
 use crate::debug_info::{DICompileUnit, DWARFEmissionKind, DWARFSourceLanguage, DebugInfoBuilder};
+#[cfg(feature = "execution_engine")]
 use crate::execution_engine::ExecutionEngine;
 use crate::memory_buffer::MemoryBuffer;
 #[llvm_versions(13..)]
+#[cfg(feature = "passes")]
 use crate::passes::PassBuilderOptions;
 use crate::support::{to_c_str, LLVMString};
+use crate::targets::TargetTriple;
 #[llvm_versions(13..)]
-use crate::targets::TargetMachine;
-use crate::targets::{InitializationConfig, Target, TargetTriple};
+#[cfg(feature = "targets")]
+use crate::targets::{InitializationConfig, Target, TargetMachine};
 use crate::types::{AsTypeRef, BasicType, FunctionType, StructType};
 #[llvm_versions(7..)]
 use crate::values::BasicValue;
@@ -168,6 +171,7 @@ pub enum Linkage {
 pub struct Module<'ctx> {
     data_layout: RefCell<Option<DataLayout>>,
     pub(crate) module: Cell<LLVMModuleRef>,
+    #[cfg(feature = "execution_engine")]
     pub(crate) owned_by_ee: RefCell<Option<ExecutionEngine<'ctx>>>,
     _marker: PhantomData<&'ctx Context>,
 }
@@ -183,6 +187,7 @@ impl<'ctx> Module<'ctx> {
 
         Module {
             module: Cell::new(module),
+            #[cfg(feature = "execution_engine")]
             owned_by_ee: RefCell::new(None),
             data_layout: RefCell::new(Some(Module::get_borrowed_data_layout(module))),
             _marker: PhantomData,
@@ -457,6 +462,7 @@ impl<'ctx> Module<'ctx> {
     /// assert_eq!(module.get_context(), context);
     /// ```
     // SubType: ExecutionEngine<Basic?>
+    #[cfg(feature = "execution_engine")]
     pub fn create_execution_engine(&self) -> Result<ExecutionEngine<'ctx>, LLVMString> {
         Target::initialize_native(&InitializationConfig::default()).map_err(|mut err_string| {
             err_string.push('\0');
@@ -511,6 +517,7 @@ impl<'ctx> Module<'ctx> {
     /// assert_eq!(module.get_context(), context);
     /// ```
     // SubType: ExecutionEngine<Interpreter>
+    #[cfg(feature = "execution_engine")]
     pub fn create_interpreter_execution_engine(&self) -> Result<ExecutionEngine<'ctx>, LLVMString> {
         Target::initialize_native(&InitializationConfig::default()).map_err(|mut err_string| {
             err_string.push('\0');
@@ -567,6 +574,7 @@ impl<'ctx> Module<'ctx> {
     /// assert_eq!(module.get_context(), context);
     /// ```
     // SubType: ExecutionEngine<Jit>
+    #[cfg(feature = "execution_engine")]
     pub fn create_jit_execution_engine(
         &self,
         opt_level: OptimizationLevel,
@@ -1297,7 +1305,9 @@ impl<'ctx> Module<'ctx> {
     ///
     /// assert!(module.link_in_module(module2).is_ok());
     /// ```
+    #[cfg(feature = "linker")]
     pub fn link_in_module(&self, other: Self) -> Result<(), LLVMString> {
+        #[cfg(feature = "execution_engine")]
         if other.owned_by_ee.borrow().is_some() {
             let string = "Cannot link a module which is already owned by an ExecutionEngine.\0";
             return Err(LLVMString::create_from_str(string));
@@ -1500,6 +1510,7 @@ impl<'ctx> Module<'ctx> {
     /// Full pipelines may also be invoked using default<O3> and friends.
     /// See opt for full reference of the Passes format.
     #[llvm_versions(13..)]
+    #[cfg(feature = "passes")]
     pub fn run_passes(
         &self,
         passes: &str,
@@ -1523,6 +1534,7 @@ impl<'ctx> Module<'ctx> {
     }
 }
 
+/*
 impl Clone for Module<'_> {
     fn clone(&self) -> Self {
         // REVIEW: Is this just a LLVM 6 bug? We could conditionally compile this assertion for affected versions
@@ -1537,16 +1549,22 @@ impl Clone for Module<'_> {
         unsafe { Module::new(LLVMCloneModule(self.module.get())) }
     }
 }
+ */
 
 // Module owns the data layout string, so LLVMDisposeModule will deallocate it for us.
 // which is why DataLayout must be called with `new_borrowed`
 impl Drop for Module<'_> {
     fn drop(&mut self) {
+        #[cfg(feature = "execution_engine")]
         if self.owned_by_ee.borrow_mut().take().is_none() {
             unsafe {
                 LLVMDisposeModule(self.module.get());
             }
         }
+        #[cfg(not(feature = "execution_engine"))]
+        unsafe {
+            LLVMDisposeModule(self.module.get())
+        };
 
         // Context & EE will drop naturally if they are unique references at this point
     }

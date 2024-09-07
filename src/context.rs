@@ -38,6 +38,7 @@ use crate::builder::Builder;
 use crate::memory_buffer::MemoryBuffer;
 use crate::module::Module;
 use crate::support::{to_c_str, LLVMString};
+#[cfg(feature = "targets")]
 use crate::targets::TargetData;
 #[llvm_versions(12..)]
 use crate::types::AnyTypeEnum;
@@ -210,6 +211,8 @@ impl ContextImpl {
         unsafe { MetadataType::new(LLVMMetadataTypeInContext(self.0)) }
     }
 
+    
+    #[cfg(feature = "targets")]
     fn ptr_sized_int_type<'ctx>(&self, target_data: &TargetData, address_space: Option<AddressSpace>) -> IntType<'ctx> {
         let int_type_ptr = match address_space {
             Some(address_space) => unsafe {
@@ -826,6 +829,7 @@ impl Context {
     /// let int_type = context.ptr_sized_int_type(&target_data, None);
     /// ```
     #[inline]
+    #[cfg(feature = "targets")]
     pub fn ptr_sized_int_type(&self, target_data: &TargetData, address_space: Option<AddressSpace>) -> IntType {
         self.context.ptr_sized_int_type(target_data, address_space)
     }
@@ -1708,6 +1712,7 @@ impl<'ctx> ContextRef<'ctx> {
     /// let int_type = context.ptr_sized_int_type(&target_data, None);
     /// ```
     #[inline]
+    #[cfg(feature = "targets")]
     pub fn ptr_sized_int_type(&self, target_data: &TargetData, address_space: Option<AddressSpace>) -> IntType<'ctx> {
         self.context.ptr_sized_int_type(target_data, address_space)
     }
